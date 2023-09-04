@@ -64,6 +64,22 @@ curl --location 'https://local.fusionauth.io/api/login' \
 }'
 ```
 
+You can take the token from the response and then call one of the endpoints listed above by calling:
+
+```sh
+curl --location 'http://localhost:9001/make-change?total=5.12' \
+--header 'Authorization: Bearer {replaceWithToken}'
+```
+
+or
+
+```sh
+curl --location --request POST 'http://localhost:9001/panic' \
+--header 'Authorization: Bearer {replaceWithToken}'
+```
+
+
+
 ### Further Information
 
 Visit https://fusionauth.io/docs/quickstarts/quickstart-go-api for a step-by-step guide on how to build this Spring API from scratch.

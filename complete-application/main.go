@@ -18,10 +18,6 @@ import (
 
 var verifyKey *rsa.PublicKey
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome to Changebank!")
-}
-
 func makeChange(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -182,7 +178,6 @@ func containsRole(roles []string, rolesToCheck []string) []string {
 }
 
 func handleRequests() {
-	http.HandleFunc("/", homePage)
 	http.Handle("/make-change", isAuthorized(makeChange))
 	http.Handle("/panic", isAuthorized(panic))
 	log.Fatal(http.ListenAndServe(":9001", nil))
