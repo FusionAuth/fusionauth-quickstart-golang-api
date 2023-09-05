@@ -1,3 +1,4 @@
+// tag::packageimports[]
 package main
 
 import (
@@ -16,7 +17,20 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
+// end::packageimports[]
+
 var verifyKey *rsa.PublicKey
+
+func main() {
+	fmt.Println("server")
+	handleRequests()
+}
+
+func handleRequests() {
+	http.Handle("/make-change", isAuthorized(makeChange))
+	http.Handle("/panic", isAuthorized(panic))
+	log.Fatal(http.ListenAndServe(":9001", nil))
+}
 
 func makeChange(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -175,15 +189,4 @@ func containsRole(roles []string, rolesToCheck []string) []string {
 	}
 
 	return intersection
-}
-
-func handleRequests() {
-	http.Handle("/make-change", isAuthorized(makeChange))
-	http.Handle("/panic", isAuthorized(panic))
-	log.Fatal(http.ListenAndServe(":9001", nil))
-}
-
-func main() {
-	fmt.Println("server")
-	handleRequests()
 }
