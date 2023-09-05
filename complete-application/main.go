@@ -1,4 +1,4 @@
-// tag::packageimports[]
+// tag::package-imports[]
 package main
 
 import (
@@ -17,10 +17,14 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-// end::packageimports[]
+// end::package-imports[]
 
+// tag::verify-key[]
 var verifyKey *rsa.PublicKey
 
+// end::verify-key[]
+
+// tag::handlers[]
 func main() {
 	fmt.Println("server")
 	handleRequests()
@@ -32,6 +36,9 @@ func handleRequests() {
 	log.Fatal(http.ListenAndServe(":9001", nil))
 }
 
+// end::handlers[]
+
+// tag::handler-functions[]
 func makeChange(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -82,37 +89,9 @@ func panic(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func setPublicKey(kid string) {
-	if verifyKey == nil {
-		response, err := http.Get("http://localhost:9011/api/jwt/public-key?kid=" + kid)
-		if err != nil {
-			log.Fatalln(err)
-		}
+// end::handler-functions[]
 
-		responseData, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var publicKey map[string]interface{}
-
-		json.Unmarshal(responseData, &publicKey)
-
-		var publicKeyPEM = publicKey["publicKey"].(string)
-
-		var verifyBytes = []byte(publicKeyPEM)
-		verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
-
-		if err != nil {
-			fmt.Errorf(("problem retreiving public key"))
-		}
-	}
-}
-
-func GetFunctionName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-}
-
+// tag::authorization[]
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqToken := r.Header.Get("Authorization")
@@ -170,6 +149,39 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
 	})
 }
 
+// end::authorization[]
+
+// tag::set-public-key[]
+func setPublicKey(kid string) {
+	if verifyKey == nil {
+		response, err := http.Get("http://localhost:9011/api/jwt/public-key?kid=" + kid)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		responseData, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		var publicKey map[string]interface{}
+
+		json.Unmarshal(responseData, &publicKey)
+
+		var publicKeyPEM = publicKey["publicKey"].(string)
+
+		var verifyBytes = []byte(publicKeyPEM)
+		verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+
+		if err != nil {
+			fmt.Errorf(("problem retreiving public key"))
+		}
+	}
+}
+
+// end::set-public-key[]
+
+// tag::contains-roles[]
 // function for finding the intersection of two arrays
 func containsRole(roles []string, rolesToCheck []string) []string {
 	intersection := make([]string, 0)
@@ -190,3 +202,12 @@ func containsRole(roles []string, rolesToCheck []string) []string {
 
 	return intersection
 }
+
+// end::contains-roles[]
+
+// tag::helper[]
+func GetFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+// end::helper[]
