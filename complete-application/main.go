@@ -24,12 +24,15 @@ var verifyKey *rsa.PublicKey
 
 // end::verify-key[]
 
-// tag::handlers[]
+// tag::main[]
 func main() {
 	fmt.Println("server")
 	handleRequests()
 }
 
+// end::main[]
+
+// tag::handlers[]
 func handleRequests() {
 	http.Handle("/make-change", isAuthorized(makeChange))
 	http.Handle("/panic", isAuthorized(panic))
@@ -38,7 +41,19 @@ func handleRequests() {
 
 // end::handlers[]
 
-// tag::handler-functions[]
+// tag::panic-function[]
+func panic(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		fmt.Fprintf(w, "We've called the police!")
+	default:
+		fmt.Fprintf(w, "Only POST method is supported.")
+	}
+}
+
+// end::panic-function[]
+
+// tag::make-change-function[]
 func makeChange(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -80,16 +95,7 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func panic(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "POST":
-		fmt.Fprintf(w, "We've called the police!")
-	default:
-		fmt.Fprintf(w, "Only POST method is supported.")
-	}
-}
-
-// end::handler-functions[]
+// end::make-change-function[]
 
 // tag::authorization[]
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
