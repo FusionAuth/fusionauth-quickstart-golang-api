@@ -82,4 +82,4 @@ curl --location --request POST 'http://localhost:9001/panic' \
 
 ### Further Information
 
-Visit https://fusionauth.io/docs/quickstarts/quickstart-go-api for a step-by-step guide on how to build this Spring API from scratch.
+Visit https://fusionauth.io/docs/quickstarts/quickstart-go-api for a step-by-step guide on how to build this Go API from scratch.
