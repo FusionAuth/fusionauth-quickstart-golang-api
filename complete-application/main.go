@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/http"
 	"reflect"
 	"runtime"
@@ -88,6 +89,9 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 			coinName := coins[value]
 			coinCount := int(remainingAmount / value)
 			remainingAmount -= float64(coinCount) * value
+			//had to add this to help with floating point rounding issues.
+			remainingAmount = math.Round(remainingAmount*100) / 100
+
 			message += " " + strconv.Itoa(coinCount) + " " + coinName
 		}
 
