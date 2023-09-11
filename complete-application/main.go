@@ -71,15 +71,18 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 		coins[.05] = "nickels"
 		coins[.01] = "pennies"
 
+		//since a map is an unordered list, we need another list to maintain the order
 		denominationOrder := make([]float64, 0, len(coins))
 		for value, _ := range coins {
 			denominationOrder = append(denominationOrder, value)
 		}
 
+		//then we order the list
 		sort.Slice(denominationOrder, func(i, j int) bool {
 			return denominationOrder[i] > denominationOrder[j]
 		})
 
+		//for each coin in the list, we figure out how many will fit into the remainingAmount
 		for counter := range denominationOrder {
 			value := denominationOrder[counter]
 			coinName := coins[value]
@@ -144,7 +147,7 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
 				if len(result) > 0 {
 					endpoint(w, r)
 				} else {
-					fmt.Fprintf(w, "proper role not found for user")
+					fmt.Fprintf(w, "Proper role not found for user")
 				}
 
 			}
