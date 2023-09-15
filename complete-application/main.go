@@ -2,23 +2,36 @@
 package main
 
 import (
-  "crypto/rsa"
-  "encoding/json"
-  "fmt"
-  "io"
-  "log"
-  "math"
-  "net/http"
-  "reflect"
-  "runtime"
-  "sort"
-  "strconv"
-  "strings"
+	"crypto/rsa"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"math"
+	"net/http"
+	"reflect"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
 
-  "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt"
 )
 
 // end::package-imports[]
+
+// tag::define-struct[]
+type ChangeResponse struct {
+	Message string
+	Change  []DenominationCounter
+}
+
+type DenominationCounter struct {
+	Denomination string
+	Count        int
+}
+
+// end::define-struct[]
 
 // tag::verify-key[]
 var verifyKey *rsa.PublicKey
@@ -27,79 +40,99 @@ var verifyKey *rsa.PublicKey
 
 // tag::main[]
 func main() {
-  fmt.Println("server")
-  handleRequests()
-  //this is a newline comment
+	fmt.Println("server")
+	handleRequests()
+	//this is a newline comment
 }
 
 // end::main[]
 
 // tag::handlers[]
 func handleRequests() {
-  http.Handle("/make-change", isAuthorized(makeChange))
-  http.Handle("/panic", isAuthorized(panic))
-  log.Fatal(http.ListenAndServe(":9001", nil))
+	http.Handle("/make-change", isAuthorized(makeChange))
+	http.Handle("/panic", isAuthorized(panic))
+	log.Fatal(http.ListenAndServe(":9001", nil))
 }
 
 // end::handlers[]
 
 // tag::panic-function[]
 func panic(w http.ResponseWriter, r *http.Request) {
-  switch r.Method {
-  case "POST":
-    fmt.Fprintf(w, "We've called the police!")
-  default:
-    fmt.Fprintf(w, "Only POST method is supported.")
-  }
+	message := ""
+	var status int
+
+	switch r.Method {
+	case "POST":
+		message = "We've called the police!"
+		status = http.StatusOK
+	default:
+		message = "Only POST method is supported."
+		status = http.StatusNotImplemented
+	}
+
+	responseObject := make(map[string]string)
+	responseObject["message"] = message
+
+	SetWriterReturn(w, status, responseObject)
 }
 
 // end::panic-function[]
 
 // tag::make-change-function[]
 func makeChange(w http.ResponseWriter, r *http.Request) {
-  switch r.Method {
-  case "GET":
-    var total = r.URL.Query().Get("total")
-    var message = "We can make change using"
-    remainingAmount, err := strconv.ParseFloat(total, 64)
-    if err != nil {
-      fmt.Fprintf(w, "Problem converting the submitted value to a decimal.  Value submitted: "+total)
-      return
-    }
+	response := ChangeResponse{}
 
-    coins := make(map[float64]string)
-    coins[.25] = "quarters"
-    coins[.10] = "dimes"
-    coins[.05] = "nickels"
-    coins[.01] = "pennies"
+	switch r.Method {
+	case "GET":
+		var total = r.URL.Query().Get("total")
+		var message = "We can make change using"
+		remainingAmount, err := strconv.ParseFloat(total, 64)
+		if err != nil {
+			fmt.Fprintf(w, "Problem converting the submitted value to a decimal.  Value submitted: "+total)
+			return
+		}
 
-    //since a map is an unordered list, we need another list to maintain the order
-    denominationOrder := make([]float64, 0, len(coins))
-    for value, _ := range coins {
-      denominationOrder = append(denominationOrder, value)
-    }
+		coins := make(map[float64]string)
+		coins[.25] = "quarters"
+		coins[.10] = "dimes"
+		coins[.05] = "nickels"
+		coins[.01] = "pennies"
 
-    //then we order the list
-    sort.Slice(denominationOrder, func(i, j int) bool {
-      return denominationOrder[i] > denominationOrder[j]
-    })
+		//since a map is an unordered list, we need another list to maintain the order
+		denominationOrder := make([]float64, 0, len(coins))
+		for value, _ := range coins {
+			denominationOrder = append(denominationOrder, value)
+		}
 
-    //for each coin in the list, we figure out how many will fit into the remainingAmount
-    for counter := range denominationOrder {
-      value := denominationOrder[counter]
-      coinName := coins[value]
-      coinCount := int(remainingAmount / value)
-      remainingAmount -= float64(coinCount) * value
-      //had to add this to help with floating point rounding issues.
-      remainingAmount = math.Round(remainingAmount*100) / 100
+		//then we order the list
+		sort.Slice(denominationOrder, func(i, j int) bool {
+			return denominationOrder[i] > denominationOrder[j]
+		})
 
-      message += " " + strconv.Itoa(coinCount) + " " + coinName
-    }
+		//for each coin in the list, we figure out how many will fit into the remainingAmount
+		for counter := range denominationOrder {
+			value := denominationOrder[counter]
+			coinName := coins[value]
+			coinCount := int(remainingAmount / value)
+			remainingAmount -= float64(coinCount) * value
+			//had to add this to help with floating point rounding issues.
+			remainingAmount = math.Round(remainingAmount*100) / 100
 
-    fmt.Fprintf(w, message)
-  default:
-    fmt.Fprintf(w, "Only GET method is supported.")
-  }
+			message += " " + strconv.Itoa(coinCount) + " " + coinName
+			denominationCount := DenominationCounter{}
+			denominationCount.Denomination = coinName
+			denominationCount.Count = coinCount
+			response.Change = append(response.Change, denominationCount)
+		}
+		response.Message = message
+
+		SetWriterReturn(w, http.StatusOK, response)
+
+	default:
+		responseObject := make(map[string]string)
+		responseObject["message"] = "Only POST method is supported."
+		SetWriterReturn(w, http.StatusNotImplemented, responseObject)
+	}
 
 }
 
@@ -107,91 +140,95 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 
 // tag::authorization[]
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
-  return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    reqToken := r.Header.Get("Authorization")
-    if reqToken != "" {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqToken := r.Header.Get("Authorization")
+		if reqToken != "" {
 
-      splitToken := strings.Split(reqToken, "Bearer ")
-      reqToken = splitToken[1]
-      token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-          return nil, fmt.Errorf(("invalid signing method"))
-        }
-        aud := "e9fdb985-9173-4e01-9d73-ac2d60d1dc8e"
-        checkAudience := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
-        if !checkAudience {
-          return nil, fmt.Errorf(("invalid aud"))
-        }
-        // verify iss claim
-        iss := "http://localhost:9011"
-        checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
-        if !checkIss {
-          return nil, fmt.Errorf(("invalid iss"))
-        }
+			splitToken := strings.Split(reqToken, "Bearer ")
+			reqToken = splitToken[1]
+			token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+					return nil, fmt.Errorf(("invalid signing method"))
+				}
+				aud := "e9fdb985-9173-4e01-9d73-ac2d60d1dc8e"
+				checkAudience := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
+				if !checkAudience {
+					return nil, fmt.Errorf(("invalid aud"))
+				}
+				// verify iss claim
+				iss := "http://localhost:9011"
+				checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
+				if !checkIss {
+					return nil, fmt.Errorf(("invalid iss"))
+				}
 
-        setPublicKey(token.Header["kid"].(string))
-        return verifyKey, nil
-      })
-      if err != nil {
-        fmt.Fprintf(w, err.Error())
-        return
-      }
+				setPublicKey(token.Header["kid"].(string))
+				return verifyKey, nil
+			})
+			if err != nil {
+				fmt.Fprintf(w, err.Error())
+				return
+			}
 
-      if token.Valid {
-        var roles = token.Claims.(jwt.MapClaims)["roles"]
-        var validRoles []string
+			if token.Valid {
+				var roles = token.Claims.(jwt.MapClaims)["roles"]
+				var validRoles []string
 
-        switch pageToGet := GetFunctionName((endpoint)); pageToGet {
-        case "main.panic":
-          validRoles = []string{"teller"}
-        case "main.makeChange":
-          validRoles = []string{"customer", "teller"}
-        }
+				switch pageToGet := GetFunctionName((endpoint)); pageToGet {
+				case "main.panic":
+					validRoles = []string{"teller"}
+				case "main.makeChange":
+					validRoles = []string{"customer", "teller"}
+				}
 
-        result := containsRole([]string{roles.([]interface{})[0].(string)}, validRoles)
+				result := containsRole([]string{roles.([]interface{})[0].(string)}, validRoles)
 
-        if len(result) > 0 {
-          endpoint(w, r)
-        } else {
-          fmt.Fprintf(w, "Proper role not found for user")
-        }
+				if len(result) > 0 {
+					endpoint(w, r)
+				} else {
+					responseObject := make(map[string]string)
+					responseObject["message"] = "Proper role not found for user"
+					SetWriterReturn(w, http.StatusUnauthorized, responseObject)
+				}
 
-      }
+			}
 
-    } else {
-      fmt.Fprintf(w, "No Authorization Token provided")
-    }
-  })
+		} else {
+			responseObject := make(map[string]string)
+			responseObject["message"] = "No Authorization Token provided"
+			SetWriterReturn(w, http.StatusUnauthorized, responseObject)
+		}
+	})
 }
 
 // end::authorization[]
 
 // tag::set-public-key[]
 func setPublicKey(kid string) {
-  if verifyKey == nil {
-    response, err := http.Get("http://localhost:9011/api/jwt/public-key?kid=" + kid)
-    if err != nil {
-      log.Fatalln(err)
-    }
+	if verifyKey == nil {
+		response, err := http.Get("http://localhost:9011/api/jwt/public-key?kid=" + kid)
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-    responseData, err := io.ReadAll(response.Body)
-    if err != nil {
-      log.Fatal(err)
-    }
+		responseData, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-    var publicKey map[string]interface{}
+		var publicKey map[string]interface{}
 
-    json.Unmarshal(responseData, &publicKey)
+		json.Unmarshal(responseData, &publicKey)
 
-    var publicKeyPEM = publicKey["publicKey"].(string)
+		var publicKeyPEM = publicKey["publicKey"].(string)
 
-    var verifyBytes = []byte(publicKeyPEM)
-    verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
+		var verifyBytes = []byte(publicKeyPEM)
+		verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyBytes)
 
-    if err != nil {
-      fmt.Errorf(("problem retreiving public key"))
-    }
-  }
+		if err != nil {
+			fmt.Errorf(("problem retreiving public key"))
+		}
+	}
 }
 
 // end::set-public-key[]
@@ -199,30 +236,40 @@ func setPublicKey(kid string) {
 // tag::contains-roles[]
 // function for finding the intersection of two arrays
 func containsRole(roles []string, rolesToCheck []string) []string {
-  intersection := make([]string, 0)
+	intersection := make([]string, 0)
 
-  set := make(map[string]bool)
+	set := make(map[string]bool)
 
-  // Create a set from the first array
-  for _, role := range roles {
-    set[role] = true // setting the initial value to true
-  }
+	// Create a set from the first array
+	for _, role := range roles {
+		set[role] = true // setting the initial value to true
+	}
 
-  // Check elements in the second array against the set
-  for _, role := range rolesToCheck {
-    if set[role] {
-      intersection = append(intersection, role)
-    }
-  }
+	// Check elements in the second array against the set
+	for _, role := range rolesToCheck {
+		if set[role] {
+			intersection = append(intersection, role)
+		}
+	}
 
-  return intersection
+	return intersection
 }
 
 // end::contains-roles[]
 
 // tag::helper[]
 func GetFunctionName(i interface{}) string {
-  return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func SetWriterReturn(w http.ResponseWriter, statusCode int, returnObject interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	jsonResp, err := json.Marshal(returnObject)
+	if err != nil {
+		log.Fatalf("Error happened in JSON marshal. Err: %s", err)
+	}
+	w.Write(jsonResp)
 }
 
 // end::helper[]
