@@ -42,7 +42,6 @@ var verifyKey *rsa.PublicKey
 func main() {
   fmt.Println("server")
   handleRequests()
-  //this is a newline comment
 }
 
 // end::main[]
