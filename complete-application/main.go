@@ -15,7 +15,7 @@ import (
   "strconv"
   "strings"
 
-  "github.com/golang-jwt/jwt"
+  "github.com/golang-jwt/jwt/v4"
 )
 
 // end::package-imports[]
