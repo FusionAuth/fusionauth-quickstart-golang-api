@@ -135,7 +135,9 @@
         },
         "registration": {
           "applicationId": "#{applicationId}",
-          "roles": [ "teller" ]
+          "roles": [
+            "teller"
+          ]
         }
       }
     },
@@ -153,7 +155,9 @@
         },
         "registration": {
           "applicationId": "#{applicationId}",
-          "roles": [ "customer" ]
+          "roles": [
+            "customer"
+          ]
         }
       }
     }
