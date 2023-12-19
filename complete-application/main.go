@@ -4,6 +4,7 @@ package main
 import (
   "crypto/rsa"
   "encoding/json"
+  "errors"
   "fmt"
   "io"
   "log"
@@ -142,15 +143,25 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 // tag::authorization[]
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    reqToken := r.Header.Get("Authorization")
+    reqToken := ""
+    tokenCookie, err := r.Cookie("app.at")
+    if err != nil {
+      if errors.Is(err, http.ErrNoCookie) {
+        reqToken = r.Header.Get("Authorization")
+        reqToken = r.Header.Get("Authorization")
+        splitToken := strings.Split(reqToken, "Bearer ")
+        reqToken = splitToken[1]
+      } else {
+      }
+    } else {
+      reqToken = tokenCookie.Value 
+    }
+
     responseObject := make(map[string]string)
     if reqToken == "" {
-      responseObject["message"] = "No Authorization Token provided"
+      responseObject["message"] = "No Token provided"
       SetWriterReturn(w, http.StatusUnauthorized, responseObject)
     } else {
-
-      splitToken := strings.Split(reqToken, "Bearer ")
-      reqToken = splitToken[1]
       token, err := jwt.Parse(reqToken, func(token *jwt.Token) (interface{}, error) {
         if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
           return nil, fmt.Errorf(("invalid signing method"))
