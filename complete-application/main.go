@@ -148,7 +148,6 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
     if err != nil {
       if errors.Is(err, http.ErrNoCookie) {
         reqToken = r.Header.Get("Authorization")
-        reqToken = r.Header.Get("Authorization")
         splitToken := strings.Split(reqToken, "Bearer ")
         reqToken = splitToken[1]
       }
