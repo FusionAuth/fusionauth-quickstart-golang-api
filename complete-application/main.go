@@ -132,7 +132,7 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 
   default:
     responseObject := make(map[string]string)
-    responseObject["message"] = "Only POST method is supported."
+    responseObject["message"] = "Only GET method is supported."
     SetWriterReturn(w, http.StatusNotImplemented, responseObject)
   }
 
