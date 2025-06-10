@@ -40,7 +40,7 @@ You can log into the [FusionAuth admin UI](http://localhost:9011/admin) and look
 
 The `complete-application` directory contains a minimal Go app configured to authenticate with locally running FusionAuth.
 
-Install the dependencies via the Maven wrapper and run the app server with:
+Install the dependencies and run the app server with:
 ```
 cd complete-application
 go get
