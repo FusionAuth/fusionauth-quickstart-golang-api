@@ -30,6 +30,17 @@
       }
     },
     {
+      "method": "PATCH",
+      "url": "api/system-configuration",
+      "body": {
+        "systemConfiguration": {
+          "usageDataConfiguration": {
+            "enabled": true
+          }
+        }
+      }
+    },
+    {
       "method": "POST",
       "url": "/api/key/generate/#{asymmetricKeyId}",
       "tenantId": "#{defaultTenantId}",
