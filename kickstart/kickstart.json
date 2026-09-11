@@ -22,6 +22,7 @@
   "requests": [
     {
       "method": "PATCH",
+      "url": "/api/tenant/#{defaultTenantId}",
       "body": {
         "tenant": {
           "issuer": "http://localhost:9011"
@@ -42,7 +43,6 @@
     {
       "method": "POST",
       "url": "/api/key/generate/#{asymmetricKeyId}",
-      "tenantId": "#{defaultTenantId}",
       "body": {
         "key": {
           "algorithm": "RS256",
@@ -75,14 +75,11 @@
         "application": {
           "name": "Example app",
           "oauthConfiguration": {
-            "authorizedRedirectURLs": [],
             "clientSecret": "super-secret-secret-that-should-be-regenerated-for-production",
-            "logoutURL": "http://localhost:8080/logout",
             "enabledGrants": [
-              "authorization_code",
+              "password",
               "refresh_token"
             ],
-            "proofKeyForCodeExchangePolicy": "Required",
             "requireRegistration": true
           },
           "jwtConfiguration": {
@@ -91,33 +88,12 @@
             "idTokenKeyId": "#{asymmetricKeyId}"
           },
           "registrationConfiguration": {
-            "birthDate": {
-              "enabled": false,
-              "required": false
-            },
-            "confirmPassword": false,
             "enabled": true,
-            "firstName": {
-              "enabled": false,
-              "required": false
-            },
             "fullName": {
               "enabled": true,
               "required": true
             },
-            "lastName": {
-              "enabled": false,
-              "required": false
-            },
             "loginIdType": "email",
-            "middleName": {
-              "enabled": false,
-              "required": false
-            },
-            "mobilePhone": {
-              "enabled": false,
-              "required": false
-            },
             "type": "basic"
           },
           "roles": [

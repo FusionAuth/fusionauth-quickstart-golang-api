@@ -1,4 +1,3 @@
-// tag::package-imports[]
 package main
 
 import (
@@ -19,9 +18,7 @@ import (
   "github.com/golang-jwt/jwt/v4"
 )
 
-// end::package-imports[]
 
-// tag::define-struct[]
 type ChangeResponse struct {
   Message string
   Change  []DenominationCounter
@@ -32,31 +29,23 @@ type DenominationCounter struct {
   Count        int
 }
 
-// end::define-struct[]
 
-// tag::verify-key[]
 var verifyKey *rsa.PublicKey
 
-// end::verify-key[]
 
-// tag::main[]
 func main() {
   fmt.Println("server")
   handleRequests()
 }
 
-// end::main[]
 
-// tag::handlers[]
 func handleRequests() {
   http.Handle("/make-change", isAuthorized(makeChange))
   http.Handle("/panic", isAuthorized(panic))
   log.Fatal(http.ListenAndServe(":9001", nil))
 }
 
-// end::handlers[]
 
-// tag::panic-function[]
 func panic(w http.ResponseWriter, r *http.Request) {
   message := ""
   var status int
@@ -76,9 +65,7 @@ func panic(w http.ResponseWriter, r *http.Request) {
   SetWriterReturn(w, status, responseObject)
 }
 
-// end::panic-function[]
 
-// tag::make-change-function[]
 func makeChange(w http.ResponseWriter, r *http.Request) {
   response := ChangeResponse{}
 
@@ -100,24 +87,21 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
     coins[.05] = "nickels"
     coins[.01] = "pennies"
 
-    //since a map is an unordered list, we need another list to maintain the order
+    // a map is unordered, so maintain a separate ordered list
     denominationOrder := make([]float64, 0, len(coins))
     for value := range coins {
       denominationOrder = append(denominationOrder, value)
     }
 
-    //then we order the list
     sort.Slice(denominationOrder, func(i, j int) bool {
       return denominationOrder[i] > denominationOrder[j]
     })
 
-    //for each coin in the list, we figure out how many will fit into the remainingAmount
     for counter := range denominationOrder {
       value := denominationOrder[counter]
       coinName := coins[value]
       coinCount := int(remainingAmount / value)
       remainingAmount -= float64(coinCount) * value
-      //had to add this to help with floating point rounding issues.
       remainingAmount = math.Round(remainingAmount*100) / 100
 
       message += " " + strconv.Itoa(coinCount) + " " + coinName
@@ -138,21 +122,21 @@ func makeChange(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// end::make-change-function[]
 
-// tag::authorization[]
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
   return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
     reqToken := ""
     tokenCookie, err := r.Cookie("app.at")
     if err != nil {
       if errors.Is(err, http.ErrNoCookie) {
-        reqToken = r.Header.Get("Authorization")
-        splitToken := strings.Split(reqToken, "Bearer ")
-        reqToken = splitToken[1]
+        authHeader := r.Header.Get("Authorization")
+        splitToken := strings.Split(authHeader, "Bearer ")
+        if len(splitToken) > 1 {
+          reqToken = splitToken[1]
+        }
       }
     } else {
-      reqToken = tokenCookie.Value 
+      reqToken = tokenCookie.Value
     }
 
     responseObject := make(map[string]string)
@@ -211,9 +195,7 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
   })
 }
 
-// end::authorization[]
 
-// tag::set-public-key[]
 func setPublicKey(kid string) {
   if verifyKey == nil {
     response, err := http.Get("http://localhost:9011/api/jwt/public-key?kid=" + kid)
@@ -241,21 +223,16 @@ func setPublicKey(kid string) {
   }
 }
 
-// end::set-public-key[]
 
-// tag::contains-roles[]
-// function for finding the intersection of two arrays
 func containsRole(roles []string, rolesToCheck []string) []string {
   intersection := make([]string, 0)
 
   set := make(map[string]bool)
 
-  // Create a set from the first array
   for _, role := range roles {
-    set[role] = true // setting the initial value to true
+    set[role] = true
   }
 
-  // Check elements in the second array against the set
   for _, role := range rolesToCheck {
     if set[role] {
       intersection = append(intersection, role)
@@ -265,9 +242,7 @@ func containsRole(roles []string, rolesToCheck []string) []string {
   return intersection
 }
 
-// end::contains-roles[]
 
-// tag::helper[]
 func GetFunctionName(i interface{}) string {
   return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
@@ -282,4 +257,3 @@ func SetWriterReturn(w http.ResponseWriter, statusCode int, returnObject interfa
   w.Write(jsonResp)
 }
 
-// end::helper[]
